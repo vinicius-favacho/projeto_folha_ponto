@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selecionar Voluntários e Datas</title>
+    <script src="script.js" defer></script> <!-- Inclua seu arquivo JS aqui -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .field {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        select, input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+        .days-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .day-box {
+            width: 40px;
+            text-align: center;
+        }
+        .submit-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .select-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Selecionar Voluntários e Datas</h1>
+        
+        <div class="field">
+            <label for="voluntarios">Nome do Voluntário:</label>
+            <div class="select-container">
+                <select id="voluntarios" multiple>
+                    <!-- Nomes dos voluntários serão carregados aqui -->
+                </select>
+                <div>
+                    <label for="selectAll">Selecionar Todos:</label>
+                    <input type="checkbox" id="selectAll">
+                </div>
+            </div>
+        </div>
+
+        <div class="field">
+            <label for="ano">Ano:</label>
+            <input type="number" id="ano" min="2020" max="2100" value="2024">
+        </div>
+
+        <div class="field">
+            <label for="mes">Mês:</label>
+            <select id="mes" onchange="gerarDias()">
+                <option value="1">Janeiro</option>
+                <option value="2">Fevereiro</option>
+                <option value="3">Março</option>
+                <option value="4">Abril</option>
+                <option value="5">Maio</option>
+                <option value="6">Junho</option>
+                <option value="7">Julho</option>
+                <option value="8">Agosto</option>
+                <option value="9">Setembro</option>
+                <option value="10">Outubro</option>
+                <option value="11">Novembro</option>
+                <option value="12">Dezembro</option>
+            </select>
+        </div>
+
+        <div class="field">
+            <label>Dias Justificados:</label>
+            <div id="diasJustificado" class="days-container">
+                <!-- Os dias serão gerados dinamicamente aqui -->
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Dias Feriados:</label>
+            <div id="diasFeriado" class="days-container">
+                <!-- Os dias serão gerados dinamicamente aqui -->
+            </div>
+        </div>
+
+        <div class="submit-container">
+            <button id="submitBtn">Enviar</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            fetch('/voluntarios')
+                .then(response => response.json())
+                .then(data => {
+                    const voluntariosSelect = document.getElementById('voluntarios');
+                    data.forEach(nome => {
+                        const option = document.createElement('option');
+                        option.value = nome;
+                        option.textContent = nome;
+                        voluntariosSelect.appendChild(option);
+                    });
+                });
+   
+            // Adicionar funcionalidade ao checkbox "Selecionar Todos"
+            document.getElementById('selectAll').addEventListener('change', function() {
+                const isChecked = this.checked;
+                const options = document.getElementById('voluntarios').options;
+                for (let i = 0; i < options.length; i++) {
+                    options[i].selected = isChecked;
+                }
+            });
+   
+            // Adicionar funcionalidade ao botão de submit
+            document.getElementById('submitBtn').addEventListener('click', function() {
+                const selecionados = Array.from(document.getElementById('voluntarios').selectedOptions)
+                                           .map(option => option.value);
+                const ano = document.getElementById("ano").value;
+                const mes = document.getElementById("mes").value;
+                const dadosJustificados = Array.from(document.querySelectorAll('#diasJustificado input:checked'))
+                                                .map(input => input.value);
+                const dadosFeriados = Array.from(document.querySelectorAll('#diasFeriado input:checked'))
+                                           .map(input => input.value);
+   
+                const formData = {
+                    voluntarios: selecionados,
+                    ano: ano,
+                    mes: mes,
+                    justificados: dadosJustificados,
+                    feriados: dadosFeriados
+                };
+   
+                fetch('/processar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Dados enviados com sucesso:', data);
+                })
+                .catch(error => {
+                    console.error('Erro ao enviar dados:', error);
+                });
+            });
+
+            // Função para gerar os dias
+            function gerarDias() {
+                let mes = document.getElementById("mes").value;
+                let ano = document.getElementById("ano").value;
+                let diasNoMes = new Date(ano, mes, 0).getDate();
+
+                let diasJustificado = document.getElementById("diasJustificado");
+                let diasFeriado = document.getElementById("diasFeriado");
+
+                diasJustificado.innerHTML = "";
+                diasFeriado.innerHTML = "";
+
+                for (let dia = 1; dia <= diasNoMes; dia++) {
+                    let checkboxJustificado = document.createElement("input");
+                    checkboxJustificado.type = "checkbox";
+                    checkboxJustificado.id = `justificado${dia}`;
+                    checkboxJustificado.value = dia;
+                    
+                    let labelJustificado = document.createElement("label");
+                    labelJustificado.className = "day-box";
+                    labelJustificado.appendChild(checkboxJustificado);
+                    labelJustificado.appendChild(document.createTextNode(dia));
+                    
+                    let checkboxFeriado = document.createElement("input");
+                    checkboxFeriado.type = "checkbox";
+                    checkboxFeriado.id = `feriado${dia}`;
+                    checkboxFeriado.value = dia;
+
+                    let labelFeriado = document.createElement("label");
+                    labelFeriado.className = "day-box";
+                    labelFeriado.appendChild(checkboxFeriado);
+                    labelFeriado.appendChild(document.createTextNode(dia));
+
+                    diasJustificado.appendChild(labelJustificado);
+                    diasFeriado.appendChild(labelFeriado);
+                }
+            }
+
+            // Gerar dias ao carregar a página
+            gerarDias();
+        });
+    </script>
+</body>
+</html>

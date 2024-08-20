@@ -1,0 +1,12 @@
+ECHO est� ativado.
+# Ignorar arquivos tempor�rios do Excel
+uploads/~$*
+
+# Ignorar diret�rio de depend�ncias
+node_modules/
+
+# Ignorar arquivos de lock
+package-lock.json
+
+* text=auto
+
